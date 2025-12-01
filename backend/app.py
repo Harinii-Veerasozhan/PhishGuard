@@ -3,21 +3,23 @@ from flask_cors import CORS
 import re
 import requests
 from urllib.parse import urlparse
-import tldextract  # NEW: for domain extraction
+import tldextract  # For domain extraction
 
 app = Flask(__name__)
 CORS(app)
 
 # ------------------------------
-#  FEATURE SETTINGS
+#  SETTINGS
 # ------------------------------
-TRIGGER_WORDS = ["win", "prize", "gift", "free", "claim", "bonus", "offer",
-                 "login", "secure", "verify", "update", "bank", "paypal", "auth", "confirm"]
+TRIGGER_WORDS = [
+    "win", "prize", "gift", "free", "claim", "bonus", "offer",
+    "login", "secure", "verify", "update", "bank", "paypal", "auth", "confirm"
+]
 BRAND_DOMAINS = ["paypal", "bank", "amazon", "google", "facebook", "apple"]
 SAFE_THRESHOLD = 70  # >70 safe, <=70 phishing/high-risk
 
 # ------------------------------
-#  DOMAIN HELPER
+#  DOMAIN HELPERS
 # ------------------------------
 def get_registered_domain(url):
     ext = tldextract.extract(url)
@@ -25,14 +27,11 @@ def get_registered_domain(url):
 
 def domain_mismatch(url):
     reg_domain = get_registered_domain(url).lower()
-    # Check if any brand is mentioned in the URL but not in the actual registered domain
     url_lower = url.lower()
-    mismatch = 0
     for brand in BRAND_DOMAINS:
         if brand in url_lower and brand not in reg_domain:
-            mismatch = 1
-            break
-    return mismatch
+            return 1
+    return 0
 
 # ------------------------------
 #  FEATURE EXTRACTION
@@ -60,7 +59,7 @@ def extract_features(url):
     has_at = int("@" in url)
     has_ip = int(re.match(r"\d+\.\d+\.\d+\.\d+", hostname or "") is not None)
 
-    features = {
+    return {
         "url": url,
         "url_length": url_length,
         "special_chars_count": special_chars_count,
@@ -75,43 +74,39 @@ def extract_features(url):
         "hostname": hostname,
         "path": path
     }
-    return features
 
 # ------------------------------
 #  SCORING FUNCTION
 # ------------------------------
 def compute_safety_score(feat):
-    url_length = feat["url_length"]
-    trigger_count = feat["trigger_count"]
-    redirect_count = feat["redirect_count"]
-    special_ratio = feat["special_char_ratio"]
-    token_mismatch = feat["token_mismatch"]
-    brand_mismatch = feat["brand_mismatch"]
+    # Scores between 0 (bad) and 1 (good)
+    token_score = 1.0 if feat["token_mismatch"] == 0 else 0.0
+    brand_score = 1.0 if feat["brand_mismatch"] == 0 else 0.0
+    trigger_score = max(0.0, 1.0 - feat["trigger_count"] / 5.0)
+    redirect_score = max(0.0, 1.0 - feat["redirect_count"] / 4.0)
+    length_score = 1.0 if feat["url_length"] <= 50 else max(0.0, 1.0 - ((feat["url_length"] - 50) / 170.0))
+    special_score = max(0.0, 1.0 - feat["special_char_ratio"] / 0.15)
 
-    # 1. token/brand mismatch score
-    token_score = 0.0 if token_mismatch == 1 or brand_mismatch == 1 else 1.0
+    # Stronger weight for brand mismatch
+    weights = {
+        "token": 0.1,
+        "brand": 0.5,
+        "trigger": 0.2,
+        "redirect": 0.1,
+        "length": 0.05,
+        "special": 0.05
+    }
 
-    # 2. trigger word score
-    trigger_score = max(0.0, 1.0 - (trigger_count / 5.0))
+    weighted = (
+        token_score * weights["token"] +
+        brand_score * weights["brand"] +
+        trigger_score * weights["trigger"] +
+        redirect_score * weights["redirect"] +
+        length_score * weights["length"] +
+        special_score * weights["special"]
+    )
 
-    # 3. redirect count score
-    redirect_score = max(0.0, 1.0 - (redirect_count / 4.0))
-
-    # 4. URL length score
-    length_score = 1.0 if url_length <= 50 else max(0.0, 1.0 - ((url_length - 50) / 170.0))
-
-    # 5. special char ratio score
-    special_score = max(0.0, 1.0 - (special_ratio / 0.15))
-
-    weights = {"token":0.35, "trigger":0.2, "redirect":0.15, "length":0.15, "special":0.15}
-    weighted = (token_score*weights["token"] +
-                trigger_score*weights["trigger"] +
-                redirect_score*weights["redirect"] +
-                length_score*weights["length"] +
-                special_score*weights["special"])
-    final_score = int(round(weighted * 100))
-
-    return final_score
+    return int(round(weighted * 100))
 
 # ------------------------------
 #  ROUTES
@@ -128,19 +123,18 @@ def analyze_page():
 def scan_url():
     data = request.get_json() or {}
     url = data.get("url", "").strip()
-
     if not url:
-        return jsonify({"status":"error","message":"No URL provided"}), 400
+        return jsonify({"status": "error", "message": "No URL provided"}), 400
 
     try:
         feat = extract_features(url)
         score = compute_safety_score(feat)
-        prediction_text = "Safe URL" if score > SAFE_THRESHOLD else "Phishing URL"
+        prediction = "Safe URL" if score > SAFE_THRESHOLD else "Phishing URL"
 
         insights = [
             f"URL Length: {feat['url_length']}",
             f"Special Characters: {feat['special_chars_count']} (ratio {feat['special_char_ratio']})",
-            f"Trigger Words Detected: {feat['trigger_count']}",
+            f"Trigger Words: {feat['trigger_count']}",
             f"Token Mismatch: {'Yes' if feat['token_mismatch'] else 'No'}",
             f"Brand Mismatch: {'Yes' if feat['brand_mismatch'] else 'No'}",
             f"Redirect Count: {feat['redirect_count']}",
@@ -151,13 +145,13 @@ def scan_url():
 
         return jsonify({
             "status": "success",
-            "prediction": prediction_text,
+            "prediction": prediction,
             "trust": score,
             "features": insights
         })
 
     except Exception as e:
-        return jsonify({"status":"error","message":str(e)}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
