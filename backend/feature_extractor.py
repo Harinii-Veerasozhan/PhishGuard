@@ -1,27 +1,52 @@
 import re
 from urllib.parse import urlparse
 
-TRIGGER_WORDS = ["gift", "win", "offer", "bonus", "prize", "free", "claim"]
+# List of suspicious top-level domains
+SUSPICIOUS_TLDS = ["xyz", "top", "club", "monster", "work", "gq", "ml", "tk"]
+
+# Common phishing keywords
+PHISHING_KEYWORDS = [
+    "secure", "account", "verify", "update", "login",
+    "signin", "bank", "paypal", "auth", "confirm"
+]
 
 def extract_features(url):
     parsed = urlparse(url)
-    domain = parsed.netloc
+    hostname = parsed.netloc.lower()  # ensure lowercase for comparisons
 
-    # 1. Length of URL
-    length = len(url)
+    # Extract TLD
+    tld = hostname.split('.')[-1] if '.' in hostname else ''
 
-    # 2. Ratio of special characters
-    special_char_ratio = sum(1 for c in url if not c.isalnum()) / length
+    # Feature dictionary
+    features = {
+        "url_length": len(url),
+        "hostname_length": len(hostname),
+        "count_dots": url.count("."),
+        "count_hyphen": url.count("-"),
+        "count_at": url.count("@"),
+        "count_question": url.count("?"),
+        "count_percent": url.count("%"),
+        "count_slash": url.count("/"),
+        "count_equal": url.count("="),
+        "has_https": 1 if url.startswith("https") else 0,
+        "digits_count": sum(c.isdigit() for c in url),
+        "letters_count": sum(c.isalpha() for c in url),
+        "special_char_count": len(re.findall(r'[^\w]', url)),
+        "suspicious_words": int(any(word in url.lower() for word in PHISHING_KEYWORDS)),
+        "suspicious_tld": int(tld in SUSPICIOUS_TLDS)
+    }
 
-    # 3. Token mismatch (google != GoOgle)
-    tokens = re.findall(r"[A-Za-z]+", domain)
-    token_mismatch = 0
-    for t in tokens:
-        if not (t.islower() or t.isupper()):
-            token_mismatch = 1
-            break
+    # Return features in fixed order
+    feature_order = [
+        "url_length", "hostname_length", "count_dots", "count_hyphen",
+        "count_at", "count_question", "count_percent", "count_slash",
+        "count_equal", "has_https", "digits_count", "letters_count",
+        "special_char_count", "suspicious_words", "suspicious_tld"
+    ]
 
-    # 4. Trigger words
-    trigger_word_flag = 1 if any(word in url.lower() for word in TRIGGER_WORDS) else 0
+    return [features[f] for f in feature_order]
 
-    return [length, special_char_ratio, token_mismatch, trigger_word_flag]
+# Example usage
+if __name__ == "__main__":
+    test_url = "http://secure-login-example.tk/account?user=123"
+    print(extract_features(test_url))
