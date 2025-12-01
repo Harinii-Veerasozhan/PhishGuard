@@ -3,6 +3,7 @@ from flask_cors import CORS
 import re
 import requests
 from urllib.parse import urlparse
+import tldextract  # NEW: for domain extraction
 
 app = Flask(__name__)
 CORS(app)
@@ -10,8 +11,28 @@ CORS(app)
 # ------------------------------
 #  FEATURE SETTINGS
 # ------------------------------
-TRIGGER_WORDS = ["win", "prize", "gift", "free", "claim", "bonus", "offer"]
+TRIGGER_WORDS = ["win", "prize", "gift", "free", "claim", "bonus", "offer",
+                 "login", "secure", "verify", "update", "bank", "paypal", "auth", "confirm"]
+BRAND_DOMAINS = ["paypal", "bank", "amazon", "google", "facebook", "apple"]
 SAFE_THRESHOLD = 70  # >70 safe, <=70 phishing/high-risk
+
+# ------------------------------
+#  DOMAIN HELPER
+# ------------------------------
+def get_registered_domain(url):
+    ext = tldextract.extract(url)
+    return ext.domain + "." + ext.suffix
+
+def domain_mismatch(url):
+    reg_domain = get_registered_domain(url).lower()
+    # Check if any brand is mentioned in the URL but not in the actual registered domain
+    url_lower = url.lower()
+    mismatch = 0
+    for brand in BRAND_DOMAINS:
+        if brand in url_lower and brand not in reg_domain:
+            mismatch = 1
+            break
+    return mismatch
 
 # ------------------------------
 #  FEATURE EXTRACTION
@@ -26,7 +47,8 @@ def extract_features(url):
     special_chars_count = len(re.findall(r"[!@#$%^&*()_+=\[\]{};:<>,?/\\|]", url))
     special_char_ratio = special_chars_count / url_length if url_length > 0 else 0.0
     trigger_count = sum(word in url.lower() for word in TRIGGER_WORDS)
-    token_mismatch = int(any(c.islower() for c in url) and any(c.isupper() for c in url))  # 1 = mismatch
+    token_mismatch = int(any(c.islower() for c in url) and any(c.isupper() for c in url))
+    brand_mismatch = domain_mismatch(url)
 
     try:
         response = requests.get(url, timeout=3)
@@ -45,6 +67,7 @@ def extract_features(url):
         "special_char_ratio": round(special_char_ratio, 4),
         "trigger_count": trigger_count,
         "token_mismatch": token_mismatch,
+        "brand_mismatch": brand_mismatch,
         "redirect_count": redirect_count,
         "has_https": has_https,
         "has_at": has_at,
@@ -63,14 +86,24 @@ def compute_safety_score(feat):
     redirect_count = feat["redirect_count"]
     special_ratio = feat["special_char_ratio"]
     token_mismatch = feat["token_mismatch"]
+    brand_mismatch = feat["brand_mismatch"]
 
-    token_score = 0.0 if token_mismatch == 1 else 1.0
+    # 1. token/brand mismatch score
+    token_score = 0.0 if token_mismatch == 1 or brand_mismatch == 1 else 1.0
+
+    # 2. trigger word score
     trigger_score = max(0.0, 1.0 - (trigger_count / 5.0))
+
+    # 3. redirect count score
     redirect_score = max(0.0, 1.0 - (redirect_count / 4.0))
+
+    # 4. URL length score
     length_score = 1.0 if url_length <= 50 else max(0.0, 1.0 - ((url_length - 50) / 170.0))
+
+    # 5. special char ratio score
     special_score = max(0.0, 1.0 - (special_ratio / 0.15))
 
-    weights = {"token":0.3, "trigger":0.2, "redirect":0.15, "length":0.2, "special":0.15}
+    weights = {"token":0.35, "trigger":0.2, "redirect":0.15, "length":0.15, "special":0.15}
     weighted = (token_score*weights["token"] +
                 trigger_score*weights["trigger"] +
                 redirect_score*weights["redirect"] +
@@ -108,7 +141,8 @@ def scan_url():
             f"URL Length: {feat['url_length']}",
             f"Special Characters: {feat['special_chars_count']} (ratio {feat['special_char_ratio']})",
             f"Trigger Words Detected: {feat['trigger_count']}",
-            f"Token Mismatch (mixed-case trick): {'Yes' if feat['token_mismatch'] else 'No'}",
+            f"Token Mismatch: {'Yes' if feat['token_mismatch'] else 'No'}",
+            f"Brand Mismatch: {'Yes' if feat['brand_mismatch'] else 'No'}",
             f"Redirect Count: {feat['redirect_count']}",
             f"Has HTTPS: {'Yes' if feat['has_https'] else 'No'}",
             f"Has '@' symbol: {'Yes' if feat['has_at'] else 'No'}",
