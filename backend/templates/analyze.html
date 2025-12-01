@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishGuard – Analyze URL</title>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #e3f0ff, #ffffff, #eaf3ff);
+        animation: bgMove 10s infinite alternate ease-in-out;
+        overflow-x: hidden;
+    }
+
+    @keyframes bgMove {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+    }
+
+    .navbar {
+        width: 100%;
+        background: #163c86;
+        padding: 15px 0;
+        text-align: center;
+        font-size: 28px;
+        font-weight: 700;
+        color:white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 0;
+        backdrop-filter: blur(8px);
+        animation: fadeDown 1s ease;
+    }
+
+    .header {
+        text-align: center;
+        padding-top: 20px;
+        animation: fadeDown 1.4s ease;
+    }
+
+    @keyframes fadeDown {
+        from { opacity: 0; transform: translateY(-40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header h1 {
+        font-size: 38px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        animation: floatText 4s infinite ease-in-out;
+        color: #003d8f;
+    }
+
+    @keyframes floatText {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+    }
+
+    .header p {
+        font-size: 18px;
+        color: #333;
+        animation: fadeIn 2s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .analyze-container {
+        width: 450px;
+        margin: 30px auto;
+        padding: 35px;
+        background: #ffffffd8;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        animation: floatBox 4s infinite ease-in-out;
+        backdrop-filter: blur(8px);
+    }
+
+    @keyframes floatBox {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-12px); }
+    }
+
+    .url-input {
+        width: 90%;
+        padding: 16px;
+        font-size: 17px;
+        border-radius: 12px;
+        border: 2px solid #d2d9ff;
+        outline: none;
+        transition: 0.3s;
+        animation: pulseIn 1.8s ease;
+    }
+
+    @keyframes pulseIn {
+        0% { transform: scale(0.95); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .url-input:focus {
+        border-color: #6a8cff;
+        box-shadow: 0 0 10px #aac3ff;
+    }
+
+    .analyze-btn {
+        margin-top: 20px;
+        width: 50%;
+        padding: 15px;
+        background: linear-gradient(90deg, #0066ff, #0050d6);
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.3s;
+        animation: fadeInUp 1.4s ease;
+    }
+
+    .analyze-btn:hover {
+        transform: scale(1.06);
+        box-shadow: 0 0 15px #b8caff;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(25px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .scanner-area {
+        display: none;
+        margin-top: 25px;
+        text-align: center;
+        animation: fadeIn 1s ease;
+    }
+
+    .radar {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        border: 4px solid #bdd1ff;
+        margin: 0 auto;
+        position: relative;
+        overflow: hidden;
+        animation: rotateRadar 2s infinite linear;
+    }
+
+    @keyframes rotateRadar {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .radar::before {
+        content: '';
+        position: absolute;
+        width: 50%;
+        height: 2px;
+        background: #0066ff;
+        top: 50%;
+        left: 0;
+        transform-origin: right;
+    }
+
+    .scan-text {
+        margin-top: 10px;
+        font-size: 18px;
+        animation: blink 1s infinite;
+        color: #003d8f;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 1; }
+    }
+
+    .result-box {
+        display: none;
+        margin-top: 30px;
+        padding: 22px;
+        border-radius: 14px;
+        animation: popUp 0.9s ease;
+    }
+
+    @keyframes popUp {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .trust-score {
+        font-size: 22px;
+        font-weight: 700;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="navbar">🔒 PhishGuard</div>
+
+<div class="header">
+    <h1>🔍 Analyze Suspicious URLs Instantly</h1>
+    <p>Identify phishing links, scams & unsafe websites with AI-powered detection.</p>
+</div>
+
+<div class="analyze-container">
+    <input type="text" id="urlInput" class="url-input" placeholder="Paste URL to analyze…">
+    <center>
+        <button class="analyze-btn" onclick="scanURL()">Analyze</button>
+    </center>
+
+    <div class="scanner-area" id="scanner">
+        <div class="radar"></div>
+        <div class="scan-text">Scanning URL...</div>
+    </div>
+
+    <div id="result" class="result-box"></div>
+</div>
+
+<script>
+function scanURL() {
+    let url = document.getElementById("urlInput").value.trim();
+    let scanner = document.getElementById("scanner");
+    let resultBox = document.getElementById("result");
+
+    if (url === "") {
+        alert("Enter a valid URL!");
+        return;
+    }
+
+    // Show scanning animation
+    scanner.style.display = "block";
+    resultBox.style.display = "none";
+
+    fetch("/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url })
+    })
+    .then(res => res.json())
+    .then(data => {
+        scanner.style.display = "none";
+
+        if (data.status !== "success") {
+            alert("Error: " + data.message);
+            return;
+        }
+
+        resultBox.style.display = "block";
+
+        // Colors for safe / phishing
+        let isPhishing = data.prediction === "Phishing URL";
+        let bgColor = isPhishing ? "#ffe2e2" : "#e2ffe9";
+        let textColor = isPhishing ? "#b30000" : "#0f6b28";
+
+        resultBox.style.background = bgColor;
+        resultBox.style.color = textColor;
+
+        // Title
+        let title = isPhishing 
+            ? "⚠️ Phishing Detected!" 
+            : "✔️ Safe URL";
+
+        // Description based on prediction
+        let trustDescription = isPhishing
+            ? `Risk Level: <b>${data.trust}%</b>`
+            : `Safety Confidence: <b>${data.trust}%</b>`;
+
+        // Final result HTML
+        resultBox.innerHTML = `
+            <h2>${title}</h2>
+            <div class="trust-score">${trustDescription}</div>
+        `;
+    })
+    .catch(err => {
+        scanner.style.display = "none";
+        alert("Error scanning URL. Make sure backend is running.");
+        console.error(err);
+    });
+}
+</script>
+
+
+</body>
+</html>

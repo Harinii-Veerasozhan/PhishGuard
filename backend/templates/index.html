@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PhishGuard - Smart URL Protection</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    body {
+        margin: 0;
+        font-family: 'Poppins', sans-serif;
+        background: #f5f9ff;
+    }
+
+    /* Top Header */
+    .header {
+        width: 100%;
+        background: #163c86;
+        color: white;
+        padding: 18px 0;
+        text-align: center;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        animation: downFade 0.8s ease-out;
+    }
+
+    @keyframes downFade {
+        from { opacity: 0; transform: translateY(-25px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .container {
+        display: flex;
+        justify-content: space-between;
+        padding: 50px;
+        align-items: center;
+    }
+
+    .left {
+        width: 50%;
+        animation: slideInLeft 1.1s ease;
+    }
+
+    @keyframes slideInLeft {
+        from { transform: translateX(-80px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    .left h1 {
+        font-size: 42px;
+        font-weight: 700;
+        color: #163c86;
+    }
+
+    .left p {
+        font-size: 18px;
+        color: #333;
+        margin-top: 15px;
+        line-height: 1.7;
+    }
+
+    .left ul {
+        margin-top: 20px;
+    }
+
+    .left ul li {
+        font-size: 17px;
+        margin: 8px 0;
+        list-style: "✔ ";
+        color: #163c86;
+    }
+
+    .get-started {
+        display: inline-block;
+        margin-top: 30px;
+        background: #163c86;
+        color: #fff;
+        padding: 14px 32px;
+        border-radius: 8px;
+        font-size: 20px;
+        text-decoration: none;
+        transition: 0.3s;
+        animation: fadeIn 1.5s ease;
+    }
+
+    .get-started:hover {
+        background: #0e2a66;
+        transform: scale(1.08);
+    }
+
+    @keyframes fadeIn {
+        from {opacity: 0;} to {opacity: 1;}
+    }
+
+    .right img {
+        width: 430px;
+        border-radius: 15px;
+        animation: float 3s infinite ease-in-out;
+    }
+
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-12px); }
+        100% { transform: translateY(0px); }
+    }
+</style>
+
+</head>
+
+<body>
+
+<div class="header">🔒 PhishGuard</div>
+
+<div class="container">
+
+    <div class="left">
+        <center>
+            <h1>STAY SAFE FROM ONLINE SCAMS</h1>
+
+        <p>
+            Phishing scams are rapidly increasing across the internet. Fake websites try to steal
+            passwords, banking information, and personal data.  
+            <br><br>
+            <b>PhishGuard</b> helps you instantly check whether a URL is <b>Safe or Scam</b> using powerful
+            machine learning models.
+        </p>
+        <a href="/analyze" class="get-started">Get Started</a>
+        </center>
+    </div>
+
+    <div class="right">
+        <img src="/static/images/l1.jpeg" alt="Phishing Illustration">
+
+    </div>
+
+</div>
+
+</body>
+</html>
