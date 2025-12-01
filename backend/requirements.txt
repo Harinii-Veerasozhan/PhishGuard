@@ -1,6 +1,8 @@
-Flask
+flask
+flask-cors
 gunicorn
-requests
 joblib
 scikit-learn
 numpy
+pandas
+requests
