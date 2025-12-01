@@ -26,9 +26,11 @@ def get_registered_domain(url):
     return ext.domain + "." + ext.suffix
 
 def domain_mismatch(url):
-    reg_domain = get_registered_domain(url).lower()
+    extracted = tldextract.extract(url)
+    reg_domain = extracted.domain.lower()  # actual registered domain
     url_lower = url.lower()
     for brand in BRAND_DOMAINS:
+        # Check if brand is in URL but NOT in registered domain
         if brand in url_lower and brand not in reg_domain:
             return 1
     return 0
