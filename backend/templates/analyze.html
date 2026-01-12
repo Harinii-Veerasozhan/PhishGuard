@@ -233,7 +233,6 @@ function scanURL() {
         return;
     }
 
-    // Show scanning animation
     scanner.style.display = "block";
     resultBox.style.display = "none";
 
@@ -245,45 +244,45 @@ function scanURL() {
     .then(res => res.json())
     .then(data => {
         scanner.style.display = "none";
+        resultBox.style.display = "block";
 
-        if (data.status !== "success") {
-            alert("Error: " + data.message);
+        // ⚠️ INVALID URL
+        if (data.prediction === "Invalid URL") {
+            resultBox.style.background = "#fff3cd";
+            resultBox.style.color = "#856404";
+            resultBox.innerHTML = `
+                <h2>⚠️ Invalid URL</h2>
+                <div class="trust-score">
+                    Please enter a valid URL (include http:// or https://)
+                </div>
+            `;
             return;
         }
 
-        resultBox.style.display = "block";
-
-        // Colors for safe / phishing
         let isPhishing = data.prediction === "Phishing URL";
-        let bgColor = isPhishing ? "#ffe2e2" : "#e2ffe9";
-        let textColor = isPhishing ? "#b30000" : "#0f6b28";
 
-        resultBox.style.background = bgColor;
-        resultBox.style.color = textColor;
+        resultBox.style.background = isPhishing ? "#ffe2e2" : "#e2ffe9";
+        resultBox.style.color = isPhishing ? "#b30000" : "#0f6b28";
 
-        // Title
-        let title = isPhishing 
-            ? "⚠️ Phishing Detected!" 
-            : "✔️ Safe URL";
+        let title = isPhishing ? "⚠️ Phishing Detected!" : "✔️ Safe URL";
 
-        // Description based on prediction
-        let trustDescription = isPhishing
+        let trustText = isPhishing
             ? `Risk Level: <b>${data.trust}%</b>`
             : `Safety Confidence: <b>${data.trust}%</b>`;
 
-        // Final result HTML
         resultBox.innerHTML = `
             <h2>${title}</h2>
-            <div class="trust-score">${trustDescription}</div>
+            <div class="trust-score">${trustText}</div>
         `;
     })
     .catch(err => {
         scanner.style.display = "none";
-        alert("Error scanning URL. Make sure backend is running.");
+        alert("Backend error. Is Flask running?");
         console.error(err);
     });
 }
 </script>
+
 
 
 </body>
